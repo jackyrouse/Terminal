@@ -1,0 +1,17 @@
+eclipse.preferences.version=1
+environment/project/cdt.managedbuild.config.gnu.cross.exe.debug.91421720/LIBS/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.cross.exe.debug.91421720/LIBS/operation=append
+environment/project/cdt.managedbuild.config.gnu.cross.exe.debug.91421720/LIBS/value=/opt/OpenWrt-SDK/staging_dir/target-mips_34kc_uClibc-0.9.33.2/usr/lib
+environment/project/cdt.managedbuild.config.gnu.cross.exe.debug.91421720/STAGING_DIR/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.cross.exe.debug.91421720/STAGING_DIR/operation=append
+environment/project/cdt.managedbuild.config.gnu.cross.exe.debug.91421720/STAGING_DIR/value=/opt/OpenWrt-SDK/staging_dir/target-mips_34kc_uClibc-0.9.33.2
+environment/project/cdt.managedbuild.config.gnu.cross.exe.debug.91421720/append=true
+environment/project/cdt.managedbuild.config.gnu.cross.exe.debug.91421720/appendContributed=true
+environment/project/cdt.managedbuild.config.gnu.cross.exe.release.2085036117/LIBS/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.cross.exe.release.2085036117/LIBS/operation=append
+environment/project/cdt.managedbuild.config.gnu.cross.exe.release.2085036117/LIBS/value=/opt/OpenWrt-SDK/staging_dir/target-mips_34kc_uClibc-0.9.33.2/usr/lib
+environment/project/cdt.managedbuild.config.gnu.cross.exe.release.2085036117/STAGING_DIR/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.cross.exe.release.2085036117/STAGING_DIR/operation=append
+environment/project/cdt.managedbuild.config.gnu.cross.exe.release.2085036117/STAGING_DIR/value=/opt/OpenWrt-SDK/staging_dir/target-mips_34kc_uClibc-0.9.33.2
+environment/project/cdt.managedbuild.config.gnu.cross.exe.release.2085036117/append=true
+environment/project/cdt.managedbuild.config.gnu.cross.exe.release.2085036117/appendContributed=true
