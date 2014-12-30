@@ -40,7 +40,7 @@ void *RevSSIDPWDaemon::RevThreadFunc(void* lparam)
 	memset(&ser_addr, 0, sizeof(ser_addr));
 	ser_addr.sin_family = AF_INET;
 	ser_addr.sin_port = htons(5050);  //这里输入服务器端口号
-	ser_addr.sin_addr.s_addr = htonl(INADDR_ANY); //INADDR_ANY表示本机IP
+	ser_addr.sin_addr.s_addr = htonl(INADDR_ANY); //INADDR_ANY表示本机IP      inet_addr("192.168.1.1");
 	if (-1 == bind(lisenfd, (struct sockaddr *) &ser_addr, sizeof(ser_addr)))
 	{
 		fprintf(stdout, "Failed to bind");
@@ -86,12 +86,14 @@ void *RevSSIDPWDaemon::RevThreadFunc(void* lparam)
 					strcpy(SSID_buf, value["SSID"].asString().c_str());
 					strcpy(PW_buf, value["PASSWORD"].asString().c_str());
 				}
+				fprintf(stdout, "SSID is : %s\n", SSID_buf);
+				fprintf(stdout, "PASSWORD is : %s\n", PW_buf);
 				//write to wireless
 				strcpy(RevDaemon->netconfigptr->wifi_ssid, SSID_buf);
 				strcpy(RevDaemon->netconfigptr->wifi_key, PW_buf);
 				//restart wifi client network
-				RevDaemon->netconfigptr->uci_wifi_config_set();
-				RevDaemon->netconfigptr->NetworkRestart();
+				//--RevDaemon->netconfigptr->uci_wifi_config_set();
+				//--RevDaemon->netconfigptr->NetworkRestart();
 
 				fprintf(stdout, "Now send...\n");
 				memset(send_buf, 0, sizeof(send_buf));
@@ -119,8 +121,12 @@ bool RevSSIDPWDaemon::CreateRevSSIDPWThread()
 			(void*) this);
 	if (ret)
 	{
-		fprintf(stdout, "Create RecSSIDPWThreadFunc thread error!\n");
+		perror("Create RecSSIDPWThreadFunc thread error!\n");
 		return false;
+	}
+	else
+	{
+		fprintf(stdout, "Create receive SSID and PASSWORD Thread ok!\n");
 	}
 	return true;
 }

@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <queue>
+#include <fstream>
 
 #include "unit.h"
 #include "NetworkConfig.h"
@@ -95,10 +96,12 @@ public:
 	char m_remoteHost[16];
 	//远程主机端口
 	int m_port;
+	ifstream statusin;
 
 
 	priority_queue<ServerData> RevDataQueue;
 	priority_queue<ServerData> SendDataQueue;
+	priority_queue<ServerData> StatusDataQueue;
 
 	pthread_mutex_t SendDataQueuemutex; /*初始化互斥锁*/
 	pthread_mutex_t RevDataQueuemutex; /*初始化互斥锁*/
@@ -117,6 +120,14 @@ private:
 	pthread_mutex_t SendQueueThreadmutex; /*初始化互斥锁*/
 	pthread_cond_t SendQueueThreadEvent; //通讯线程退出事件句柄
 
+	bool Formating;
+	pthread_mutex_t FormateThreadmutex;/*初始化互斥锁*/
+	pthread_cond_t FormateThreadEvent;//形成设备状态发送队列线程退出事件句柄
+
+	bool SendDataing;
+	pthread_mutex_t SendStatusThreadmutex;/*初始化互斥锁*/
+	pthread_cond_t SendStatusThreadEvent;//设备状态发送发送队列线程退出事件句柄
+
 	pthread_t m_tcpThreadHandle;
 	pthread_t m_MsgProcessThreadHandle; //通讯线程句柄
 	pthread_t m_SendQueueThreadHandle; //通讯线程句柄
@@ -126,8 +137,10 @@ private:
 	static void *SocketThreadFunc(void * lparam);
 	static void *SendQueueThreadFunc(void * lparam);
 	static void *MsgProcessThreadFunc(void * lparam);
-	//定时查询设备状态线程，定时向RevDataQueue队列中加入查询命令
+	//心跳线程
 	static void *TimerQueryThreadFunc(void * lparam);
+	static void *FormatStatusQueueThreadFunc(void * lparam);
+	static void *SendStatusQueueThreadFunc(void * lparam);
 };
 
 #endif /* TCPCLIENT_H_ */

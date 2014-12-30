@@ -123,7 +123,7 @@ int MainProgram::start()
 	if (m_CommHelper.Open(this, Serdevice, SerSpeed) < 0)
 	{
 		printf("Device open failed. Programme exit!\n");
-		exit(1);
+//		exit(1);
 	}
 	else
 	{
@@ -162,6 +162,7 @@ int MainProgram::start()
 		fprintf(stdout, "TCP建立连接失败!.\n");
 		//return -1;
 	}
+
 
 	m_RecSSIDPWDaemon.netconfigptr = &m_NetworkConfig;
 	m_RecSSIDPWDaemon.CreateRevSSIDPWThread();

@@ -34,6 +34,12 @@ TCPClient::TCPClient()
 
 	pthread_cond_init(&SendQueueThreadEvent, NULL);
 	pthread_mutex_init(&SendQueueThreadmutex, NULL);
+
+	pthread_mutex_init(&FormateThreadmutex, NULL);/*初始化互斥锁*/
+	pthread_cond_init(&FormateThreadEvent, NULL);//形成设备状态发送队列线程退出事件句柄
+
+	pthread_mutex_init(&SendStatusThreadmutex, NULL);/*初始化互斥锁*/
+	pthread_cond_init(&SendStatusThreadEvent, NULL);//设备状态发送发送队列线程退出事件句柄
 }
 
 //析构函数
@@ -303,7 +309,13 @@ int TCPClient::MsgProcess(const ServerData* msg)
 		//--step3:发送函数-使用mutex进行判断是否发送下一组历史数据
 		if((0x00 == serialno)&&(0x01 == datapairs)&&(0x01 == revbuf[14]))
 		{
-
+			if(!Formating)
+			{
+				Formating = true;
+				pthread_mutex_lock(&FormateThreadmutex);
+				pthread_cond_signal(&FormateThreadEvent);
+				pthread_mutex_unlock(&FormateThreadmutex);
+			}
 		}
 		break;
 	case 0xF3:
@@ -466,6 +478,107 @@ void *TCPClient::TimerQueryThreadFunc(void* lparam)
 	return NULL;
 }
 
+void *TCPClient::FormatStatusQueueThreadFunc(void* lparam)
+{
+	TCPClient *pSocket;
+	pSocket = (TCPClient*) lparam;
+	return NULL;
+	char data[128];
+	while(true)
+	{
+		if(!pSocket->Formating)
+		{
+			pthread_mutex_lock(&pSocket->FormateThreadmutex);
+			pthread_cond_wait(&pSocket->FormateThreadEvent, &pSocket->FormateThreadmutex);
+			pthread_mutex_unlock(&pSocket->FormateThreadmutex);
+		}
+		else
+		{
+			//Format Data to Queue
+			while(!pSocket->StatusDataQueue.empty())
+			{
+				if (pSocket->StatusDataQueue.top().data != NULL)
+				{
+					delete (pSocket->StatusDataQueue.top().data);
+				}
+				pSocket->StatusDataQueue.pop();
+			}
+			char CurrentFilename[5];
+			if(!read_profile_string("StatusPosition","Position",CurrentFilename, 5,"00","/root/terminal.ini"))
+			{
+				perror("Read ini file failed in FormatFunc!\n");
+				pSocket->Formating = false;
+				break;
+			}
+			int currentpos = atoi(CurrentFilename);
+			for(int i = 0; i < 90; i++)
+			{
+				memset(data, 0x00, 128);
+				//Format 90 record file data to sendqueue
+				int tmppos = currentpos%93;
+				char tmpfilename[20];
+				sprintf(tmpfilename, "/root/status/%02d", tmppos);
+				pSocket->statusin.open(tmpfilename, ios::in|ios::binary);
+				if(pSocket->statusin.is_open())
+				{
+					//analyze file and put data to sendqueue
+					while(!pSocket->statusin.eof())
+					{
+						pSocket->statusin.read(data, 1);
+						int tmplen = data[0];
+						pSocket->statusin.read(&data[1], tmplen-1);
+						pSocket->statusin.read(&data[tmplen], 1);
+
+						ServerData m_SendData;
+						m_SendData.data = new char[tmplen + 1];
+						Hexstrncpy(m_SendData.data, data, tmplen);
+						m_SendData.data[tmplen] = 0;
+						m_SendData.data_len = tmplen;
+						m_SendData.priority = 10;
+						pthread_mutex_lock(&pSocket->FormateThreadmutex);
+						pSocket->StatusDataQueue.push(m_SendData);
+						pthread_mutex_unlock(&pSocket->FormateThreadmutex);
+					/*
+						ServerData m_SendData;
+						m_SendData.data = new char[data_len + 1];
+						Hexstrncpy(m_SendData.data, data, data_len);
+						m_SendData.data[data_len] = 0;
+						m_SendData.data_len = data_len;
+						m_SendData.priority = priority;
+						pthread_mutex_lock(&SendDataQueuemutex);
+						SendDataQueue.push(m_SendData);
+						pthread_mutex_unlock(&SendDataQueuemutex);
+						*/
+					}
+				}
+				pSocket->statusin.close();
+				currentpos++;
+			}
+			//Format done
+			pSocket->Formating = false;
+		}
+	}
+}
+
+void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
+{
+	TCPClient *pSocket;
+	pSocket = (TCPClient*) lparam;
+	while(true)
+	{
+		if(!pSocket->SendDataing)
+		{
+			pthread_mutex_lock(&pSocket->SendStatusThreadmutex);
+			pthread_cond_wait(&pSocket->SendStatusThreadEvent, &pSocket->SendStatusThreadmutex);
+			pthread_mutex_unlock(&pSocket->SendStatusThreadmutex);
+		}
+		else
+		{
+			//发送status data
+		}
+	}
+	return NULL;
+}
 /*--------------------------------------------------------------------
  【函数介绍】: 用于打开客户端socket
  【入口参数】: (无)
@@ -528,6 +641,8 @@ bool TCPClient::CreateRevThread()
 int TCPClient::Open(MainProgram * lp)
 {
 	m_MainProgram = lp;
+	Formating = false;
+	SendDataing = false;
 	return 1;
 }
 
