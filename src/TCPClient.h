@@ -85,6 +85,10 @@ public:
 	void uploadstatusfile();
 	char GetOnlineMode();
 
+	bool ConnectReceiveHost();
+	bool FormatStatusData(char* data, int* outlen);
+	bool SendStatus(char* data, int len);
+
 	int IntervalSeconds;
 	int fileposition;
 
@@ -98,10 +102,12 @@ public:
 	int m_port;
 	ifstream statusin;
 
+	char m_ReceiveFileHost[16];
+	int m_ReceiveFilePort;
+
 
 	priority_queue<ServerData> RevDataQueue;
 	priority_queue<ServerData> SendDataQueue;
-	priority_queue<ServerData> StatusDataQueue;
 
 	pthread_mutex_t SendDataQueuemutex; /*初始化互斥锁*/
 	pthread_mutex_t RevDataQueuemutex; /*初始化互斥锁*/
@@ -109,6 +115,7 @@ public:
 private:
 	//通讯Socket句柄
 	int m_socket;
+	int m_SendStatusSocket;
 	bool ExitFlag;
 	bool ConnectionStatus;
 	bool RevThreadFuncStatus;
@@ -139,7 +146,6 @@ private:
 	static void *MsgProcessThreadFunc(void * lparam);
 	//心跳线程
 	static void *TimerQueryThreadFunc(void * lparam);
-	static void *FormatStatusQueueThreadFunc(void * lparam);
 	static void *SendStatusQueueThreadFunc(void * lparam);
 };
 

@@ -312,6 +312,13 @@ int TCPClient::MsgProcess(const ServerData* msg)
 			if(!Formating)
 			{
 				Formating = true;
+				struct in_addr receiveipaddr;
+				memcpy(&receiveipaddr, &revbuf[12], 4);
+				fprintf(stdout, "Receive File host IP is : %s\n", inet_ntoa(receiveipaddr));
+				strcpy(m_ReceiveFileHost, inet_ntoa(receiveipaddr));
+				m_ReceiveFilePort = abs(256*abs((unsigned char)revbuf[17])+abs((unsigned char)revbuf[16]));
+				fprintf(stdout, "Receive File host PORT is : %d\n", m_ReceiveFilePort);
+
 				pthread_mutex_lock(&FormateThreadmutex);
 				pthread_cond_signal(&FormateThreadEvent);
 				pthread_mutex_unlock(&FormateThreadmutex);
@@ -478,12 +485,103 @@ void *TCPClient::TimerQueryThreadFunc(void* lparam)
 	return NULL;
 }
 
-void *TCPClient::FormatStatusQueueThreadFunc(void* lparam)
+bool TCPClient::ConnectReceiveHost()
+{
+	struct sockaddr_in addr;
+
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(m_ReceiveFilePort);
+
+	addr.sin_addr.s_addr = inet_addr(m_ReceiveFileHost);
+
+	if ((m_SendStatusSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+	{
+		m_SendStatusSocket = -1;
+		perror("套接字初始化失败!\n");
+		return false;
+	}
+
+	// 设置接收缓冲区
+	int nRecvBuf = 32 * 1024;				//设置为32K
+	setsockopt(m_SendStatusSocket, SOL_SOCKET, SO_RCVBUF, (const char*) &nRecvBuf, sizeof(int));
+	// 设置发送缓冲区
+	int nSendBuf = 32 * 1024;				//设置为32K
+	setsockopt(m_SendStatusSocket, SOL_SOCKET, SO_SNDBUF, (const char*) &nSendBuf, sizeof(int));
+
+	if (-1 == connect(m_SendStatusSocket, (struct sockaddr *) (&addr), sizeof(addr)))
+	{
+		m_SendStatusSocket = -1;
+		perror("连接服务器失败!\n");
+
+		return false;
+	}
+
+	int flags;
+	if ((flags = fcntl(m_SendStatusSocket, F_GETFL, 0)) < 0)
+	{
+		m_SendStatusSocket = -1;
+		fprintf(stdout, "获取通讯模式出错\n");
+		return false;
+	}
+	//出错处理
+	flags |= O_NONBLOCK;
+	if ((fcntl(m_SendStatusSocket, F_SETFL, flags)) < 0)
+	{
+		m_SendStatusSocket = -1;
+		fprintf(stdout, "设置为非阻塞模式出错\n");
+		return false;
+	}
+	return true;
+}
+
+bool TCPClient::FormatStatusData(char* data, int* outlen)
+{
+	char CurrentFilename[5];
+	if(!read_profile_string("StatusPosition","Position",CurrentFilename, 5,"00","/root/terminal.ini"))
+	{
+		//发送错误消息只服务器
+		perror("Read ini file failed in FormatFunc!\n");
+		m_SendStatusSocket = -1;
+		*outlen = 0;
+		return false;
+	}
+
+	int currentpos = atoi(CurrentFilename);
+	int tmpfilelen = 0;
+	int memorypos = 0;
+	for(int i = 0; i < 90; i++)
+	{
+		//Format 90 record file data to sendqueue
+		int tmppos = currentpos%93;
+		char tmpfilename[20];
+		sprintf(tmpfilename, "/root/status/%02d", tmppos);
+		statusin.close();
+		statusin.open(tmpfilename, ios::in|ios::binary);
+		if(statusin.is_open())
+		{
+			statusin.seekg(0, ios::end);
+			tmpfilelen = statusin.tellg();
+			statusin.read(&data[memorypos], tmpfilelen);
+			memorypos += tmpfilelen;
+		}
+		else
+		{
+			perror("Format status record error!\n");
+			*outlen = 0;
+			return false;
+		}
+		statusin.close();
+		currentpos++;
+	}
+	*outlen = memorypos;
+	return true;
+}
+
+void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 {
 	TCPClient *pSocket;
 	pSocket = (TCPClient*) lparam;
-	return NULL;
-	char data[128];
+//	char data[128];
 	while(true)
 	{
 		if(!pSocket->Formating)
@@ -494,91 +592,213 @@ void *TCPClient::FormatStatusQueueThreadFunc(void* lparam)
 		}
 		else
 		{
-			//Format Data to Queue
-			while(!pSocket->StatusDataQueue.empty())
+			//连接文件接收服务器
+			if(!pSocket->ConnectReceiveHost())
 			{
-				if (pSocket->StatusDataQueue.top().data != NULL)
-				{
-					delete (pSocket->StatusDataQueue.top().data);
-				}
-				pSocket->StatusDataQueue.pop();
-			}
-			char CurrentFilename[5];
-			if(!read_profile_string("StatusPosition","Position",CurrentFilename, 5,"00","/root/terminal.ini"))
-			{
-				perror("Read ini file failed in FormatFunc!\n");
 				pSocket->Formating = false;
-				break;
+				continue;
 			}
-			int currentpos = atoi(CurrentFilename);
-			for(int i = 0; i < 90; i++)
-			{
-				memset(data, 0x00, 128);
-				//Format 90 record file data to sendqueue
-				int tmppos = currentpos%93;
-				char tmpfilename[20];
-				sprintf(tmpfilename, "/root/status/%02d", tmppos);
-				pSocket->statusin.open(tmpfilename, ios::in|ios::binary);
-				if(pSocket->statusin.is_open())
-				{
-					//analyze file and put data to sendqueue
-					while(!pSocket->statusin.eof())
-					{
-						pSocket->statusin.read(data, 1);
-						int tmplen = data[0];
-						pSocket->statusin.read(&data[1], tmplen-1);
-						pSocket->statusin.read(&data[tmplen], 1);
 
-						ServerData m_SendData;
-						m_SendData.data = new char[tmplen + 1];
-						Hexstrncpy(m_SendData.data, data, tmplen);
-						m_SendData.data[tmplen] = 0;
-						m_SendData.data_len = tmplen;
-						m_SendData.priority = 10;
-						pthread_mutex_lock(&pSocket->FormateThreadmutex);
-						pSocket->StatusDataQueue.push(m_SendData);
-						pthread_mutex_unlock(&pSocket->FormateThreadmutex);
-					/*
-						ServerData m_SendData;
-						m_SendData.data = new char[data_len + 1];
-						Hexstrncpy(m_SendData.data, data, data_len);
-						m_SendData.data[data_len] = 0;
-						m_SendData.data_len = data_len;
-						m_SendData.priority = priority;
-						pthread_mutex_lock(&SendDataQueuemutex);
-						SendDataQueue.push(m_SendData);
-						pthread_mutex_unlock(&SendDataQueuemutex);
-						*/
+			//Format Data to Queue
+			int reallen = 0;
+			char* sendstatusmemory = new char[1024*1024*10];//10M内存空间存储状态
+			pSocket->FormatStatusData(sendstatusmemory, &reallen);
+			fd_set fdRead;
+			int ret;
+			struct timeval aTime;
+			char recvBuf[1024];
+			int recvLen;
+
+			if(reallen)
+			{
+				//进行发送sendstatusmemory内存中的数据
+				char sendbuffer[2200];
+				memset(sendbuffer, 0x00, 2200);
+				memcpy(sendbuffer, pSocket->Headarray, 9);
+				sendbuffer[9] = 0xEE;
+				sendbuffer[10] = 0xF2;
+				sendbuffer[11] = 0x01;
+				sendbuffer[12] = reallen/256/256/256;
+				sendbuffer[13] = (reallen%(256*256*256))/(256*256);
+				sendbuffer[14] = (reallen%(256*256))/256;
+				sendbuffer[15] = reallen;
+				int sendlen = 16;
+				if(send(pSocket->m_SendStatusSocket, sendbuffer, sendlen, 0) < 0 )
+				{
+					perror("发送记录文件长度失败!\n");
+					pSocket->m_SendStatusSocket = -1;
+					pSocket->Formating = false;
+					delete []sendstatusmemory;
+					continue;
+				}
+				else
+				{
+					aTime.tv_sec = 30;
+					aTime.tv_usec = 0;
+					//置空fdRead事件为空
+					FD_ZERO(&fdRead);
+					//给客户端socket设置读事件
+					FD_SET(pSocket->m_SendStatusSocket, &fdRead);
+					//调用select函数，判断是否有读事件发生
+					ret = select(pSocket->m_SendStatusSocket + 1, &fdRead, NULL, NULL, &aTime);
+
+					if (ret == -1)
+					{
+						pSocket->m_SendStatusSocket = -1;
+						pSocket->Formating = false;
+						delete []sendstatusmemory;
+						continue;
+						//break;
+					}
+					if (ret > 0)
+					{
+						if (FD_ISSET(pSocket->m_SendStatusSocket, &fdRead))
+						{
+							//发生读事件
+							memset(recvBuf, 0, 1024);
+							//接收数据
+							recvLen = recv(pSocket->m_SendStatusSocket, recvBuf, 1024, 0);
+							if (recvLen == -1)
+							{
+								pSocket->m_SendStatusSocket = -1;
+								pSocket->Formating = false;
+								delete []sendstatusmemory;
+								continue;
+							}
+							else if (recvLen == 0)
+							{
+								pSocket->m_SendStatusSocket = -1;
+								pSocket->Formating = false;
+								delete []sendstatusmemory;
+								continue;
+							}
+							else
+							{
+								//触发数据接收事件
+								if((0xF5 == recvBuf[10])&&(0x01 == recvBuf[11]))
+								{
+									int tempsendlen = (unsigned char)recvBuf[12]*256*256*256+(unsigned char)recvBuf[13]*256*256+
+											(unsigned char)recvBuf[14]*256+(unsigned char)recvBuf[15];
+									if(tempsendlen != reallen)
+									{
+										perror("网络错误，退出发送！\n")
+										pSocket->m_SendStatusSocket = -1;
+										pSocket->Formating = false;
+										delete []sendstatusmemory;
+										continue;
+									}
+								}
+							}
+						}
 					}
 				}
-				pSocket->statusin.close();
-				currentpos++;
-			}
-			//Format done
-			pSocket->Formating = false;
-		}
-	}
-}
 
-void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
-{
-	TCPClient *pSocket;
-	pSocket = (TCPClient*) lparam;
-	while(true)
-	{
-		if(!pSocket->SendDataing)
-		{
-			pthread_mutex_lock(&pSocket->SendStatusThreadmutex);
-			pthread_cond_wait(&pSocket->SendStatusThreadEvent, &pSocket->SendStatusThreadmutex);
-			pthread_mutex_unlock(&pSocket->SendStatusThreadmutex);
-		}
-		else
-		{
-			//发送status data
+				int sendcirs = reallen/1024+1;
+				for(int i = 0; i < sendcirs; i++)
+				{
+					//循环发送
+					memset(&sendbuffer[10], 0x00, 2190);
+					sendbuffer[10] = 0xF3;
+					sendbuffer[11] = 0x01;
+					if(i != (sendcirs -1))
+					{
+						sendbuffer[12] = 1024/256;
+						sendbuffer[13] = 1024%256;
+						memcpy(&sendbuffer[14], &sendstatusmemory[i*1024], 1024);
+						sendlen = 1036;
+					}
+					else
+					{
+						int taillen = reallen - 1024*(sendcirs+1);
+						if(taillen>0)
+						{
+							sendbuffer[12] = taillen/256;
+							sendbuffer[13] = taillen%256;
+							memcpy(&sendbuffer[14], &sendstatusmemory[i*1024], taillen);
+							sendlen = 12 + taillen;
+						}
+					}
+					if(sendlen == 12)
+					{
+						break;
+					}
+
+					if(send(pSocket->m_SendStatusSocket, sendbuffer, sendlen, 0) < 0 )
+					{
+						perror("发送记录文件长度失败!\n");
+						pSocket->m_SendStatusSocket = -1;
+						pSocket->Formating = false;
+						break;
+					}
+					else
+					{
+						//接受服务器反馈
+						aTime.tv_sec = 30;
+						aTime.tv_usec = 0;
+						//置空fdRead事件为空
+						FD_ZERO(&fdRead);
+						//给客户端socket设置读事件
+						FD_SET(pSocket->m_SendStatusSocket, &fdRead);
+						//调用select函数，判断是否有读事件发生
+						ret = select(pSocket->m_SendStatusSocket + 1, &fdRead, NULL, NULL, &aTime);
+
+						if (ret == -1)
+						{
+							pSocket->m_SendStatusSocket = -1;
+							pSocket->Formating = false;
+							delete []sendstatusmemory;
+							continue;
+							//break;
+						}
+						if (ret > 0)
+						{
+							if (FD_ISSET(pSocket->m_SendStatusSocket, &fdRead))
+							{
+								//发生读事件
+								memset(recvBuf, 0, 1024);
+								//接收数据
+								recvLen = recv(pSocket->m_SendStatusSocket, recvBuf, 1024, 0);
+								if (recvLen == -1)
+								{
+									pSocket->m_SendStatusSocket = -1;
+									pSocket->Formating = false;
+									delete []sendstatusmemory;
+									continue;
+								}
+								else if (recvLen == 0)
+								{
+									pSocket->m_SendStatusSocket = -1;
+									pSocket->Formating = false;
+									delete []sendstatusmemory;
+									continue;
+								}
+								else
+								{
+									//触发数据接收事件
+									if((0xF3 == recvBuf[10])&&(0x01 == recvBuf[11]))
+									{
+										int tempsendlen = (unsigned char)recvBuf[12]*256+(unsigned char)recvBuf[13];
+										if(tempsendlen != sendlen)
+										{
+											perror("网络错误，退出发送！\n")
+											pSocket->m_SendStatusSocket = -1;
+											pSocket->Formating = false;
+											break;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+
+			delete []sendstatusmemory;
+			pSocket->Formating = false;
 		}
 	}
 	return NULL;
 }
+
 /*--------------------------------------------------------------------
  【函数介绍】: 用于打开客户端socket
  【入口参数】: (无)

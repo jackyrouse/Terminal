@@ -28,7 +28,7 @@ int NetworkConfig::Init(MainProgram *lp)
 
 int NetworkConfig::NetworkRestart()
 {
-
+/*
 	pid_t pid;
 	int status;
 
@@ -49,7 +49,10 @@ int NetworkConfig::NetworkRestart()
 		printf("waitpid error.\n");
 		return -1;
 	}
-	printf("Network Restart Success!\n");
+	printf("Network Restart Success!\n");*/
+
+//	execl("/etc/init.d/network", "network", "restart", NULL); // 执行程序
+	system("/etc/init.d/network restart");
 	usleep(50 * 1000);
 	return 0;
 

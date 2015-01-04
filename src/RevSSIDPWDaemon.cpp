@@ -92,8 +92,8 @@ void *RevSSIDPWDaemon::RevThreadFunc(void* lparam)
 				strcpy(RevDaemon->netconfigptr->wifi_ssid, SSID_buf);
 				strcpy(RevDaemon->netconfigptr->wifi_key, PW_buf);
 				//restart wifi client network
-				//--RevDaemon->netconfigptr->uci_wifi_config_set();
-				//--RevDaemon->netconfigptr->NetworkRestart();
+				RevDaemon->netconfigptr->uci_wifi_config_set();
+				RevDaemon->netconfigptr->NetworkRestart();
 
 				fprintf(stdout, "Now send...\n");
 				memset(send_buf, 0, sizeof(send_buf));
