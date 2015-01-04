@@ -681,7 +681,7 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 											(unsigned char)recvBuf[14]*256+(unsigned char)recvBuf[15];
 									if(tempsendlen != reallen)
 									{
-										perror("网络错误，退出发送！\n")
+										perror("网络错误，退出发送！\n");
 										pSocket->m_SendStatusSocket = -1;
 										pSocket->Formating = false;
 										delete []sendstatusmemory;
@@ -780,7 +780,7 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 										int tempsendlen = (unsigned char)recvBuf[12]*256+(unsigned char)recvBuf[13];
 										if(tempsendlen != sendlen)
 										{
-											perror("网络错误，退出发送！\n")
+											perror("网络错误，退出发送！\n");
 											pSocket->m_SendStatusSocket = -1;
 											pSocket->Formating = false;
 											break;
@@ -791,14 +791,13 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 						}
 					}
 				}
-
+			}
 			delete []sendstatusmemory;
 			pSocket->Formating = false;
 		}
 	}
 	return NULL;
 }
-
 /*--------------------------------------------------------------------
  【函数介绍】: 用于打开客户端socket
  【入口参数】: (无)
