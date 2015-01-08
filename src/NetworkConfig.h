@@ -37,6 +37,7 @@ public:
 	MainProgram * m_MainProgram; //引用
 	char wifi_ssid[33];
 	char wifi_key[33];
+	char wifi_mode[33];
 
 };
 

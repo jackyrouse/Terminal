@@ -29,8 +29,9 @@ void *RevSSIDPWDaemon::RevThreadFunc(void* lparam)
 	int len = 0;
 	char recv_buf[1024];
 	char send_buf[1024];
-	char SSID_buf[50];
-	char PW_buf[50];
+	char SSID_buf[33];
+	char PW_buf[33];
+	char MODE_buf[33];
 	lisenfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (-1 == lisenfd)
 	{
@@ -76,8 +77,9 @@ void *RevSSIDPWDaemon::RevThreadFunc(void* lparam)
 				fprintf(stdout, "Recv from client is %s\n", recv_buf);
 
 				//Analyze SSID and PASSWORD
-				memset(SSID_buf, 0, 50);
-				memset(PW_buf, 0, 50);
+				memset(SSID_buf, 0x00, 33);
+				memset(PW_buf, 0x00, 33);
+				memset(MODE_buf, 0x00, 33);
 				string ssidandpwstr = recv_buf;
 				Json::Reader reader;
 				Json::Value value;
@@ -85,12 +87,15 @@ void *RevSSIDPWDaemon::RevThreadFunc(void* lparam)
 				{
 					strcpy(SSID_buf, value["SSID"].asString().c_str());
 					strcpy(PW_buf, value["PASSWORD"].asString().c_str());
+					strcpy(MODE_buf, value["MODE"].asString().c_str());
 				}
 				fprintf(stdout, "SSID is : %s\n", SSID_buf);
 				fprintf(stdout, "PASSWORD is : %s\n", PW_buf);
+				fprintf(stdout, "MODE is : %s\n", MODE_buf);
 				//write to wireless
 				strcpy(RevDaemon->netconfigptr->wifi_ssid, SSID_buf);
 				strcpy(RevDaemon->netconfigptr->wifi_key, PW_buf);
+				strcpy(RevDaemon->netconfigptr->wifi_mode, MODE_buf);
 				//restart wifi client network
 				RevDaemon->netconfigptr->uci_wifi_config_set();
 				RevDaemon->netconfigptr->NetworkRestart();

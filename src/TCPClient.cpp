@@ -601,6 +601,7 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 
 			//Format Data to Queue
 			int reallen = 0;
+			int serialno = 0;
 			char* sendstatusmemory = new char[1024*1024*10];//10M内存空间存储状态
 			pSocket->FormatStatusData(sendstatusmemory, &reallen);
 			fd_set fdRead;
@@ -626,6 +627,7 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 				if(send(pSocket->m_SendStatusSocket, sendbuffer, sendlen, 0) < 0 )
 				{
 					perror("发送记录文件长度失败!\n");
+					close(pSocket->m_SendStatusSocket);
 					pSocket->m_SendStatusSocket = -1;
 					pSocket->Formating = false;
 					delete []sendstatusmemory;
@@ -644,6 +646,7 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 
 					if (ret == -1)
 					{
+						close(pSocket->m_SendStatusSocket);
 						pSocket->m_SendStatusSocket = -1;
 						pSocket->Formating = false;
 						delete []sendstatusmemory;
@@ -660,6 +663,7 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 							recvLen = recv(pSocket->m_SendStatusSocket, recvBuf, 1024, 0);
 							if (recvLen == -1)
 							{
+								close(pSocket->m_SendStatusSocket);
 								pSocket->m_SendStatusSocket = -1;
 								pSocket->Formating = false;
 								delete []sendstatusmemory;
@@ -667,6 +671,7 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 							}
 							else if (recvLen == 0)
 							{
+								close(pSocket->m_SendStatusSocket);
 								pSocket->m_SendStatusSocket = -1;
 								pSocket->Formating = false;
 								delete []sendstatusmemory;
@@ -677,11 +682,13 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 								//触发数据接收事件
 								if((0xF5 == recvBuf[10])&&(0x01 == recvBuf[11]))
 								{
+									int tempserial;
 									int tempsendlen = (unsigned char)recvBuf[12]*256*256*256+(unsigned char)recvBuf[13]*256*256+
 											(unsigned char)recvBuf[14]*256+(unsigned char)recvBuf[15];
 									if(tempsendlen != reallen)
 									{
 										perror("网络错误，退出发送！\n");
+										close(pSocket->m_SendStatusSocket);
 										pSocket->m_SendStatusSocket = -1;
 										pSocket->Formating = false;
 										delete []sendstatusmemory;
@@ -725,7 +732,8 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 
 					if(send(pSocket->m_SendStatusSocket, sendbuffer, sendlen, 0) < 0 )
 					{
-						perror("发送记录文件长度失败!\n");
+						close(pSocket->m_SendStatusSocket);
+						perror("发送记录文件包失败!\n");
 						pSocket->m_SendStatusSocket = -1;
 						pSocket->Formating = false;
 						break;
@@ -744,6 +752,7 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 
 						if (ret == -1)
 						{
+							close(pSocket->m_SendStatusSocket);
 							pSocket->m_SendStatusSocket = -1;
 							pSocket->Formating = false;
 							delete []sendstatusmemory;
@@ -760,6 +769,7 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 								recvLen = recv(pSocket->m_SendStatusSocket, recvBuf, 1024, 0);
 								if (recvLen == -1)
 								{
+									close(pSocket->m_SendStatusSocket);
 									pSocket->m_SendStatusSocket = -1;
 									pSocket->Formating = false;
 									delete []sendstatusmemory;
@@ -767,6 +777,7 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 								}
 								else if (recvLen == 0)
 								{
+									close(pSocket->m_SendStatusSocket);
 									pSocket->m_SendStatusSocket = -1;
 									pSocket->Formating = false;
 									delete []sendstatusmemory;
@@ -781,6 +792,7 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 										if(tempsendlen != sendlen)
 										{
 											perror("网络错误，退出发送！\n");
+											close(pSocket->m_SendStatusSocket);
 											pSocket->m_SendStatusSocket = -1;
 											pSocket->Formating = false;
 											break;

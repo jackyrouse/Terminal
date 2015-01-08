@@ -52,7 +52,8 @@ int NetworkConfig::NetworkRestart()
 	printf("Network Restart Success!\n");*/
 
 //	execl("/etc/init.d/network", "network", "restart", NULL); // 执行程序
-	system("/etc/init.d/network restart");
+//	system("/etc/init.d/network restart");
+	system("/sbin/wifi");
 	usleep(50 * 1000);
 	return 0;
 
@@ -121,6 +122,9 @@ int NetworkConfig::uci_wifi_config_set()
 	sprintf(cmd, "%s.key=%s", wifi_iface_section, wifi_key);
 	uci_do_set_cmd(uci_ctx, &ptr, cmd);
 
+	sprintf(cmd, "%s.encryption=%s", wifi_iface_section, wifi_mode);
+	uci_do_set_cmd(uci_ctx, &ptr, cmd);
+
 	free(wifi_iface_section);
 
 	if (uci_commit(uci_ctx, &ptr.p, false) != UCI_OK)
@@ -160,6 +164,9 @@ int NetworkConfig::uci_wifi_config_get_from_file()
 	sprintf(cmd, "%s.key", wifi_iface_section);
 	uci_do_get_value_cmd(uci_ctx, &ptr, cmd, wifi_key);
 
+	sprintf(cmd, "%s.encryption", wifi_iface_section);
+	uci_do_get_value_cmd(uci_ctx, &ptr, cmd, wifi_mode);
+
 	free(wifi_iface_section);
 
 	if (ptr.p)
@@ -167,7 +174,7 @@ int NetworkConfig::uci_wifi_config_get_from_file()
 
 	uci_free_context(uci_ctx);
 
-	printf("wifi_ssid:%s , wifi_key:%s\n", wifi_ssid, wifi_key);
+	printf("wifi_ssid:%s , wifi_key:%s , wifi_mode:%s\n", wifi_ssid, wifi_key, wifi_mode);
 
 	//进行ssid与password设置，使用uci函数写入配置文件
 	uci_wifi_config_set();

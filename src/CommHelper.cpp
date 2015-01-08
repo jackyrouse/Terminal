@@ -1037,10 +1037,10 @@ int CommHelper::QueryDeviceInfo(bool statustag, bool boundtag, bool time1tag, bo
 			EcoEndTime1[0] = buffer[tmplen+6];
 		}
 		//--end of get machine Economic time1
-		DeviceInfo[18] = EcoBeginTime1[0];
-		DeviceInfo[19] = EcoBeginTime1[1];
-		DeviceInfo[20] = EcoEndTime1[0];
-		DeviceInfo[21] = EcoEndTime1[1];
+		DeviceInfo[18] = EcoBeginTime1[1];
+		DeviceInfo[19] = EcoBeginTime1[0];
+		DeviceInfo[20] = EcoEndTime1[1];
+		DeviceInfo[21] = EcoEndTime1[0];
 	}
 	if(time2tag)
 	{
@@ -1189,10 +1189,10 @@ int CommHelper::QueryDeviceInfo(bool statustag, bool boundtag, bool time1tag, bo
 			EcoEndTime2[0] = buffer[tmplen+6];
 		}
 		//--end of get machine Economic time1
-		DeviceInfo[22] = EcoBeginTime2[0];
-		DeviceInfo[23] = EcoBeginTime2[1];
-		DeviceInfo[24] = EcoEndTime2[0];
-		DeviceInfo[25] = EcoEndTime2[1];
+		DeviceInfo[22] = EcoBeginTime2[1];
+		DeviceInfo[23] = EcoBeginTime2[0];
+		DeviceInfo[24] = EcoEndTime2[1];
+		DeviceInfo[25] = EcoEndTime2[0];
 	}
 	if(time3tag)
 	{
@@ -1341,10 +1341,10 @@ int CommHelper::QueryDeviceInfo(bool statustag, bool boundtag, bool time1tag, bo
 			EcoEndTime3[0] = buffer[tmplen+6];
 		}
 		//--end of get machine Economic time1
-		DeviceInfo[26] = EcoBeginTime3[0];
-		DeviceInfo[27] = EcoBeginTime3[1];
-		DeviceInfo[28] = EcoEndTime3[0];
-		DeviceInfo[29] = EcoEndTime3[1];
+		DeviceInfo[28] = EcoBeginTime3[1];
+		DeviceInfo[29] = EcoBeginTime3[0];
+		DeviceInfo[26] = EcoEndTime3[1];
+		DeviceInfo[27] = EcoEndTime3[0];
 	}
 
 	if(otherwaterstag)
@@ -2314,7 +2314,8 @@ int CommHelper::AnalyzeData(char info[], int* infolen)
 		returndata[14] = 0x00;
 		returndata[21] = CRC8((unsigned char*)&returndata[1], 20);//0xF2;
 		returndata[22] = 0xAA;
-		m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 23);
+		if(m_MainProgram->m_tcpClient.getConnectionStatus())
+			m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 23);
 		LastDeviceInfo[0] = DeviceInfo[0];
 		LastDeviceInfo[1] = DeviceInfo[1];
 		(*infolen)++;
@@ -2337,7 +2338,8 @@ int CommHelper::AnalyzeData(char info[], int* infolen)
 		returndata[20] = 0x00;
 		returndata[21] = CRC8((unsigned char*)&returndata[1], 20);
 		returndata[22] = 0xAA;
-		m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 23);
+		if(m_MainProgram->m_tcpClient.getConnectionStatus())
+			m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 23);
 		LastDeviceInfo[12] = DeviceInfo[12];
 		LastDeviceInfo[13] = DeviceInfo[13];
 	}
@@ -2354,7 +2356,8 @@ int CommHelper::AnalyzeData(char info[], int* infolen)
 		returndata[14] = 0x00;
 		returndata[18] = CRC8((unsigned char*)&returndata[1], 17);
 		returndata[19] = 0xAA;
-		m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
+		if(m_MainProgram->m_tcpClient.getConnectionStatus())
+			m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
 		LastDeviceInfo[16] = DeviceInfo[16];
 		LastDeviceInfo[17] = DeviceInfo[17];
 		tempturechanged = true;
@@ -2371,7 +2374,8 @@ int CommHelper::AnalyzeData(char info[], int* infolen)
 		returndata[17] = 0x00;
 		returndata[18] = CRC8((unsigned char*)&returndata[1], 17);
 		returndata[19] = 0xAA;
-		m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
+		if(m_MainProgram->m_tcpClient.getConnectionStatus())
+			m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
 		LastDeviceInfo[14] = DeviceInfo[14];
 		LastDeviceInfo[15] = DeviceInfo[15];
 		tempturechanged = true;
@@ -2403,7 +2407,8 @@ int CommHelper::AnalyzeData(char info[], int* infolen)
 		returndata[14] = 0x00;
 		returndata[18] = CRC8((unsigned char*)&returndata[1], 17);
 		returndata[19] = 0xAA;
-		m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
+		if(m_MainProgram->m_tcpClient.getConnectionStatus())
+			m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
 		LastDeviceInfo[18] = DeviceInfo[18];
 		LastDeviceInfo[19] = DeviceInfo[19];
 		sectionchanged = true;
@@ -2420,7 +2425,8 @@ int CommHelper::AnalyzeData(char info[], int* infolen)
 		returndata[17] = 0x00;
 		returndata[18] = CRC8((unsigned char*)&returndata[1], 17);
 		returndata[19] = 0xAA;
-		m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
+		if(m_MainProgram->m_tcpClient.getConnectionStatus())
+			m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
 		LastDeviceInfo[20] = DeviceInfo[20];
 		LastDeviceInfo[21] = DeviceInfo[21];
 		sectionchanged = true;
@@ -2452,7 +2458,8 @@ int CommHelper::AnalyzeData(char info[], int* infolen)
 		returndata[14] = 0x00;
 		returndata[18] = CRC8((unsigned char*)&returndata[1], 17);
 		returndata[19] = 0xAA;
-		m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
+		if(m_MainProgram->m_tcpClient.getConnectionStatus())
+			m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
 		LastDeviceInfo[22] = DeviceInfo[22];
 		LastDeviceInfo[23] = DeviceInfo[23];
 		sectionchanged = true;
@@ -2469,7 +2476,8 @@ int CommHelper::AnalyzeData(char info[], int* infolen)
 		returndata[17] = 0x00;
 		returndata[18] = CRC8((unsigned char*)&returndata[1], 17);
 		returndata[19] = 0xAA;
-		m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
+		if(m_MainProgram->m_tcpClient.getConnectionStatus())
+			m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
 		LastDeviceInfo[24] = DeviceInfo[24];
 		LastDeviceInfo[25] = DeviceInfo[25];
 		sectionchanged = true;
@@ -2501,7 +2509,8 @@ int CommHelper::AnalyzeData(char info[], int* infolen)
 		returndata[14] = 0x00;
 		returndata[18] = CRC8((unsigned char*)&returndata[1], 17);
 		returndata[19] = 0xAA;
-		m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
+		if(m_MainProgram->m_tcpClient.getConnectionStatus())
+			m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
 		LastDeviceInfo[26] = DeviceInfo[26];
 		LastDeviceInfo[27] = DeviceInfo[27];
 		sectionchanged = true;
@@ -2518,7 +2527,8 @@ int CommHelper::AnalyzeData(char info[], int* infolen)
 		returndata[17] = 0x00;
 		returndata[18] = CRC8((unsigned char*)&returndata[1], 17);
 		returndata[19] = 0xAA;
-		m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
+		if(m_MainProgram->m_tcpClient.getConnectionStatus())
+			m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 20);
 		LastDeviceInfo[28] = DeviceInfo[28];
 		LastDeviceInfo[29] = DeviceInfo[29];
 		sectionchanged = true;
@@ -2642,7 +2652,8 @@ int CommHelper::AnalyzeData(char info[], int* infolen)
 	{
 		returndata[27] = CRC8((unsigned char*)&returndata[1], 26);
 		returndata[28] = 0xAA;
-		m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 29);
+		if(m_MainProgram->m_tcpClient.getConnectionStatus())
+			m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 29);
 	}
 
 	//查询错误代码
@@ -2657,7 +2668,8 @@ int CommHelper::AnalyzeData(char info[], int* infolen)
 		returndata[14] = 0x00;
 		returndata[15] = CRC8((unsigned char*)&returndata[1], 14);
 		returndata[16] = 0xAA;
-		m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 17);
+		if(m_MainProgram->m_tcpClient.getConnectionStatus())
+			m_MainProgram->m_tcpClient.AddToSendQueue(returndata, 17);
 		DeviceInfo[30] = returndata[12];
 		DeviceInfo[31] = returndata[13];
 		(*infolen)++;
@@ -2871,7 +2883,7 @@ void *CommHelper::CommReadThreadFunc(void * lparam)
 
 int CommHelper::Open(MainProgram *lp, char * device, int speed = 115200)
 {
-	tempturetag = 2;
+	tempturetag = 1;
 	m_MainProgram = lp;
 	strcat(dev, device);
 	this->Speed = speed;
