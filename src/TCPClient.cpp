@@ -1112,3 +1112,22 @@ bool TCPClient::SendData(const char * buf, int len)
 //	fprintf(stdout, "Tcp Send(Str):[%s]\n", buf);
 	return true;
 }
+
+bool TCPClient::sendF4Code()
+{
+	char sendbuf[32];
+	int sendlen;
+	memset(sendbuf, 0 ,32);
+	memcpy(sendbuf, Headarray, 9);
+	sendbuf[9] = 0x00;
+	sendbuf[10] = 0xF4;
+	sendbuf[11] = 0x01;
+	sendbuf[12] = 0x00;
+	sendbuf[13] = 0x00;
+	sendbuf[14] = 0x00;
+	sendbuf[15] = CRC8((unsigned char*)&sendbuf[1], 14);
+	sendbuf[16] = 0xAA;
+	sendlen = 17;
+	this->AddToSendQueue(sendbuf, sendlen);
+	return true;
+}

@@ -24,6 +24,7 @@
 #include "json.h"
 
 #include "NetworkConfig.h"
+#include "TCPClient.h"
 
 class RevSSIDPWDaemon
 {
@@ -34,6 +35,7 @@ public:
 public:
 	bool CreateRevSSIDPWThread();
 	NetworkConfig * netconfigptr;
+	TCPClient * tcpclientptr;
 
 private:
 	pthread_t m_RevThreadHande;

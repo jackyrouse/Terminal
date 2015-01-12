@@ -165,6 +165,7 @@ int MainProgram::start()
 
 
 	m_RecSSIDPWDaemon.netconfigptr = &m_NetworkConfig;
+	m_RecSSIDPWDaemon.tcpclientptr = &m_tcpClient;
 	m_RecSSIDPWDaemon.CreateRevSSIDPWThread();
 
 	return 0;

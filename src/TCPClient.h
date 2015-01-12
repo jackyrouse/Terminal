@@ -88,6 +88,7 @@ public:
 	bool ConnectReceiveHost();
 	bool FormatStatusData(char* data, int* outlen);
 	bool SendStatus(char* data, int len);
+	bool sendF4Code();
 
 	int IntervalSeconds;
 	int fileposition;
