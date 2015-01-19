@@ -609,6 +609,7 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 			struct timeval aTime;
 			char recvBuf[1024];
 			int recvLen;
+			int allsendlen = 0;
 
 			if(reallen)
 			{
@@ -616,14 +617,17 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 				char sendbuffer[2200];
 				memset(sendbuffer, 0x00, 2200);
 				memcpy(sendbuffer, pSocket->Headarray, 9);
-				sendbuffer[9] = 0xEE;
-				sendbuffer[10] = 0xF2;
-				sendbuffer[11] = 0x01;
-				sendbuffer[12] = reallen/256/256/256;
-				sendbuffer[13] = (reallen%(256*256*256))/(256*256);
-				sendbuffer[14] = (reallen%(256*256))/256;
-				sendbuffer[15] = reallen;
-				int sendlen = 16;
+				sendbuffer[9] = 0x00;
+				sendbuffer[10] = 0x00;
+				sendbuffer[11] = 0xF2;
+				sendbuffer[12] = 0x00;
+				sendbuffer[13] = 0x05;
+				sendbuffer[14] = reallen/256/256/256;
+				sendbuffer[15] = (reallen%(256*256*256))/(256*256);
+				sendbuffer[16] = (reallen%(256*256))/256;
+				sendbuffer[17] = reallen;
+				sendbuffer[18] = 0x01;
+				int sendlen = 19;
 				if(send(pSocket->m_SendStatusSocket, sendbuffer, sendlen, 0) < 0 )
 				{
 					perror("发送记录文件长度失败!\n");
@@ -635,7 +639,7 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 				}
 				else
 				{
-					aTime.tv_sec = 30;
+					aTime.tv_sec = 6;
 					aTime.tv_usec = 0;
 					//置空fdRead事件为空
 					FD_ZERO(&fdRead);
@@ -680,9 +684,10 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 							else
 							{
 								//触发数据接收事件
-								if((0xF5 == recvBuf[10])&&(0x01 == recvBuf[11]))
+								if(0xF3 == recvBuf[11])
 								{
-									int tempserial;
+									/*
+								 	int tempserial;
 									int tempsendlen = (unsigned char)recvBuf[12]*256*256*256+(unsigned char)recvBuf[13]*256*256+
 											(unsigned char)recvBuf[14]*256+(unsigned char)recvBuf[15];
 									if(tempsendlen != reallen)
@@ -693,110 +698,133 @@ void *TCPClient::SendStatusQueueThreadFunc(void* lparam)
 										pSocket->Formating = false;
 										delete []sendstatusmemory;
 										continue;
-									}
-								}
-							}
-						}
-					}
-				}
-
-				int sendcirs = reallen/1024+1;
-				for(int i = 0; i < sendcirs; i++)
-				{
-					//循环发送
-					memset(&sendbuffer[10], 0x00, 2190);
-					sendbuffer[10] = 0xF3;
-					sendbuffer[11] = 0x01;
-					if(i != (sendcirs -1))
-					{
-						sendbuffer[12] = 1024/256;
-						sendbuffer[13] = 1024%256;
-						memcpy(&sendbuffer[14], &sendstatusmemory[i*1024], 1024);
-						sendlen = 1036;
-					}
-					else
-					{
-						int taillen = reallen - 1024*(sendcirs+1);
-						if(taillen>0)
-						{
-							sendbuffer[12] = taillen/256;
-							sendbuffer[13] = taillen%256;
-							memcpy(&sendbuffer[14], &sendstatusmemory[i*1024], taillen);
-							sendlen = 12 + taillen;
-						}
-					}
-					if(sendlen == 12)
-					{
-						break;
-					}
-
-					if(send(pSocket->m_SendStatusSocket, sendbuffer, sendlen, 0) < 0 )
-					{
-						close(pSocket->m_SendStatusSocket);
-						perror("发送记录文件包失败!\n");
-						pSocket->m_SendStatusSocket = -1;
-						pSocket->Formating = false;
-						break;
-					}
-					else
-					{
-						//接受服务器反馈
-						aTime.tv_sec = 30;
-						aTime.tv_usec = 0;
-						//置空fdRead事件为空
-						FD_ZERO(&fdRead);
-						//给客户端socket设置读事件
-						FD_SET(pSocket->m_SendStatusSocket, &fdRead);
-						//调用select函数，判断是否有读事件发生
-						ret = select(pSocket->m_SendStatusSocket + 1, &fdRead, NULL, NULL, &aTime);
-
-						if (ret == -1)
-						{
-							close(pSocket->m_SendStatusSocket);
-							pSocket->m_SendStatusSocket = -1;
-							pSocket->Formating = false;
-							delete []sendstatusmemory;
-							continue;
-							//break;
-						}
-						if (ret > 0)
-						{
-							if (FD_ISSET(pSocket->m_SendStatusSocket, &fdRead))
-							{
-								//发生读事件
-								memset(recvBuf, 0, 1024);
-								//接收数据
-								recvLen = recv(pSocket->m_SendStatusSocket, recvBuf, 1024, 0);
-								if (recvLen == -1)
-								{
-									close(pSocket->m_SendStatusSocket);
-									pSocket->m_SendStatusSocket = -1;
-									pSocket->Formating = false;
-									delete []sendstatusmemory;
-									continue;
-								}
-								else if (recvLen == 0)
-								{
-									close(pSocket->m_SendStatusSocket);
-									pSocket->m_SendStatusSocket = -1;
-									pSocket->Formating = false;
-									delete []sendstatusmemory;
-									continue;
-								}
-								else
-								{
-									//触发数据接收事件
-									if((0xF3 == recvBuf[10])&&(0x01 == recvBuf[11]))
+									}*/
+									//--确认开始上传文件
+									if((0xE0 == recvBuf[16])||(0xE1 == recvBuf[16]))
 									{
-										int tempsendlen = (unsigned char)recvBuf[12]*256+(unsigned char)recvBuf[13];
-										if(tempsendlen != sendlen)
+										//0xE0--终止
+										//0xE1--认证失败--终止
+										close(pSocket->m_SendStatusSocket);
+										pSocket->m_SendStatusSocket = -1;
+										pSocket->Formating = false;
+										delete []sendstatusmemory;
+										continue;
+									}
+									else if(0x00 == recvBuf[16])
+									{
+										//0x00--继续上传
+										int sendcirs = reallen/1024+1;
+										for(int i = 0; i < sendcirs; i++)
 										{
-											perror("网络错误，退出发送！\n");
-											close(pSocket->m_SendStatusSocket);
-											pSocket->m_SendStatusSocket = -1;
-											pSocket->Formating = false;
-											break;
+											//循环发送
+											memset(&sendbuffer[10], 0x00, 2190);
+											sendbuffer[10] = 0xF3;
+											sendbuffer[11] = 0x01;
+											if(i != (sendcirs -1))
+											{
+												sendbuffer[12] = 1024/256;
+												sendbuffer[13] = 1024%256;
+												memcpy(&sendbuffer[14], &sendstatusmemory[i*1024], 1024);
+												sendlen = 1036;
+											}
+											else
+											{
+												int taillen = reallen - 1024*(sendcirs+1);
+												if(taillen>0)
+												{
+													sendbuffer[12] = taillen/256;
+													sendbuffer[13] = taillen%256;
+													memcpy(&sendbuffer[14], &sendstatusmemory[i*1024], taillen);
+													sendlen = 12 + taillen;
+												}
+											}
+											if(sendlen == 12)
+											{
+												break;
+											}
+
+											if(send(pSocket->m_SendStatusSocket, sendbuffer, sendlen, 0) < 0 )
+											{
+												close(pSocket->m_SendStatusSocket);
+												perror("发送记录文件包失败!\n");
+												pSocket->m_SendStatusSocket = -1;
+												pSocket->Formating = false;
+												break;
+											}
+											else
+											{
+												//接受服务器反馈
+												aTime.tv_sec = 30;
+												aTime.tv_usec = 0;
+												//置空fdRead事件为空
+												FD_ZERO(&fdRead);
+												//给客户端socket设置读事件
+												FD_SET(pSocket->m_SendStatusSocket, &fdRead);
+												//调用select函数，判断是否有读事件发生
+												ret = select(pSocket->m_SendStatusSocket + 1, &fdRead, NULL, NULL, &aTime);
+
+												if (ret == -1)
+												{
+													close(pSocket->m_SendStatusSocket);
+													pSocket->m_SendStatusSocket = -1;
+													pSocket->Formating = false;
+													delete []sendstatusmemory;
+													continue;
+													//break;
+												}
+												if (ret > 0)
+												{
+													if (FD_ISSET(pSocket->m_SendStatusSocket, &fdRead))
+													{
+														//发生读事件
+														memset(recvBuf, 0, 1024);
+														//接收数据
+														recvLen = recv(pSocket->m_SendStatusSocket, recvBuf, 1024, 0);
+														if (recvLen == -1)
+														{
+															close(pSocket->m_SendStatusSocket);
+															pSocket->m_SendStatusSocket = -1;
+															pSocket->Formating = false;
+															delete []sendstatusmemory;
+															continue;
+														}
+														else if (recvLen == 0)
+														{
+															close(pSocket->m_SendStatusSocket);
+															pSocket->m_SendStatusSocket = -1;
+															pSocket->Formating = false;
+															delete []sendstatusmemory;
+															continue;
+														}
+														else
+														{
+															//触发数据接收事件
+															if((0xF3 == recvBuf[10])&&(0x01 == recvBuf[11]))
+															{
+																int tempsendlen = (unsigned char)recvBuf[12]*256+(unsigned char)recvBuf[13];
+																if(tempsendlen != sendlen)
+																{
+																	perror("网络错误，退出发送！\n");
+																	close(pSocket->m_SendStatusSocket);
+																	pSocket->m_SendStatusSocket = -1;
+																	pSocket->Formating = false;
+																	break;
+																}
+															}
+														}
+													}
+												}
+											}
 										}
+									}
+									else
+									{
+										//--异常终止传输
+										close(pSocket->m_SendStatusSocket);
+										pSocket->m_SendStatusSocket = -1;
+										pSocket->Formating = false;
+										delete []sendstatusmemory;
+										continue;
 									}
 								}
 							}
